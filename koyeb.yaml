@@ -1,0 +1,5 @@
+service:
+  type: web
+  name: talent-map
+  env: node
+  command: node server-standalone.js

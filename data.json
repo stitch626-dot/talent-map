@@ -1,0 +1,28 @@
+{
+  "users": [
+    {
+      "id": "u_admin",
+      "name": "贾洪爽",
+      "email": "admin@talentmap.com",
+      "password": "ccb19ee60fbc93f6b73aac2b2965013eb14ca7de761e995acf4405337b4b4317",
+      "role": "admin",
+      "avatarColor": "#1f5eff"
+    }
+  ],
+  "space": {
+    "name": "贾洪爽 的团队空间"
+  },
+  "companies": [],
+  "positions": [],
+  "talents": [],
+  "talentPositions": [],
+  "resumeFiles": [],
+  "communicationRecords": [],
+  "reminders": [],
+  "activityLogs": [],
+  "workExperiences": [],
+  "invites": [],
+  "settings": {
+    "feishuWebhook": "https://open.feishu.cn/open-apis/bot/v2/hook/d68c1d3a-7fda-4b16-a734-06052cf27bc5"
+  }
+}

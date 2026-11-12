@@ -1,0 +1,12 @@
+{
+  "name": "talent-map",
+  "version": "1.0.0",
+  "description": "人才地图 Talent Mapping",
+  "main": "server-standalone.js",
+  "scripts": {
+    "start": "node server-standalone.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

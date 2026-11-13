@@ -1,13 +1,4 @@
-const fs = require('fs');
-const p = 'C:/Users/Administrator/Documents/Codex/2026-11-05/new-chat/work/talent-map-server/public';
-
-// Add api-client.js script to index.html
-let html = fs.readFileSync(p + '/index.html', 'utf8');
-html = html.replace('<script src="app.js"></script>', '<script src="api-client.js"></script>\n<script src="app.js"></script>');
-fs.writeFileSync(p + '/index.html', html, 'utf8');
-
-// Create login page
-const loginHtml = `<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
@@ -95,7 +86,4 @@ async function handleSubmit(e) {
 }
 </script>
 </body>
-</html>`;
-
-fs.writeFileSync(p + '/login.html', loginHtml, 'utf8');
-console.log('Login page created');
+</html>

@@ -238,100 +238,101 @@ const ResumeParser = {
   /* 从文本中提取工作经历（公司名称 + 时间 + 工作内容） */
   extractWorkExperiences(text) {
     const experiences = [];
-    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+    const seen = new Set();
 
-    // ====== SIMPLER, MORE ROBUST APPROACH ======
-    // Step 1: Find all date ranges in the text
-    // Matches: 2020.01-2023.06, 2020/01-2023/06, 2020.01 - 2023.06, 2020年1月-2023年6月, 2020.1-至今
+    // Date pattern: matches various formats like 2020.01-2023.06, 2020年1月-至今, etc.
     const datePattern = /(\d{4})\s*[年.\/\-]?\s*(\d{1,2})?\s*[月]?\s*[\-–—~至到]\s*(\d{4})\s*[年.\/\-]?\s*(\d{1,2})?\s*[月]?|(\d{4})\s*[年.\/\-]?\s*(\d{1,2})?\s*[月]?\s*[\-–—~至到]\s*(至今|现在|present|now)/gi;
-    
-    // Step 2: Find all potential company names
-    const companyPattern = /([\u4e00-\u9fa5A-Za-z0-9（）()·&]{2,30}(?:公司|集团|科技|网络|信息|有限公司|股份公司|技术|软件|数据|传媒|咨询|教育|医疗|金融|地产|汽车|制造))/g;
 
-    // Step 3: Split text into blocks by date markers
+    // Step 1: Find all date ranges
     let dateMatches = [];
-    let match;
-    while ((match = datePattern.exec(text)) !== null) {
+    let dm;
+    while ((dm = datePattern.exec(text)) !== null) {
       dateMatches.push({
-        text: match[0],
-        index: match.index,
-        startYear: match[1] || match[5],
-        startMonth: match[2] || match[6] || '',
-        endYear: match[3],
-        endMonth: match[4] || '',
-        isPresent: !!match[7]
+        text: dm[0].trim(),
+        index: dm.index,
+        startYear: dm[1] || dm[5],
+        startMonth: dm[2] || dm[6] || '',
+        endYear: dm[3] || '',
+        endMonth: dm[4] || '',
+        isPresent: !!dm[7]
       });
     }
+    if (dateMatches.length === 0) return experiences;
 
-    // Step 4: For each date range, look backward/forward for company name and description
+    // Step 2: Process each date block
     for (let i = 0; i < dateMatches.length; i++) {
-      const dm = dateMatches[i];
-      const nextIdx = i + 1 < dateMatches.length ? dateMatches[i + 1].index : text.length;
+      const cur = dateMatches[i];
+
+      // Block boundaries: from end of previous date to next date
+      const prevEnd = i > 0 ? dateMatches[i - 1].index + dateMatches[i - 1].text.length : Math.max(0, cur.index - 120);
+      const nextStart = i + 1 < dateMatches.length ? dateMatches[i + 1].index : Math.min(text.length, cur.index + 600);
       
-      // Text slice: from 100 chars before this date to the next date (or 500 chars)
-      const start = Math.max(0, dm.index - 120);
-      const end = Math.min(text.length, dm.index + 500, nextIdx);
-      const snippet = text.substring(start, end);
-      
-      // Find company name near this date
+      const afterStart = cur.index + cur.text.length;
+      const afterText = text.substring(afterStart, nextStart).trim();
+      const beforeText = text.substring(Math.max(prevEnd, cur.index - 80), cur.index).trim();
+
       let company = '';
       let position = '';
       let content = '';
+
+      // Try company AFTER date first
+      const companyAfter = afterText.match(/^\s*([\u4e00-\u9fa5A-Za-z0-9（）()·&]{2,40}(?:公司|集团|科技|网络|信息|有限公司|股份公司|技术|软件|数据|传媒|咨询|教育|医疗|金融|地产|汽车|制造|互联网|电子商务|云|智能|数字|通信|电子|半导体|银行|保险|证券|基金|投资|控股|事务所|研究院|学院|大学|医院|中心|平台|实验室|工作室))/);
       
-      // Look for company name before the date in this snippet
-      const beforeDate = text.substring(Math.max(0, dm.index - 120), dm.index);
-      let cm;
-      companyPattern.lastIndex = 0;
-      while ((cm = companyPattern.exec(beforeDate)) !== null) {
-        company = cm[1]; // Get the last/closest one
+      if (companyAfter && !/^(?:工作|职责|负责|参与|任职|主要|项目|时间|地址|电话|邮箱|学历|教育|技能|自我|证书|联系|个人|求职|应聘|期望|意向|语言|专业|学校|毕业|出生|高级|资深|初级|中级|工程师|经理|主管|专员|总监|设计师|分析师|架构师|专家|顾问|负责人|代表|助理|实习生|运营|编辑|策划|产品|研发|开发|测试|运维|市场|销售|财务|人力|前端|后端|全栈|算法|数据|技术|Java|Python|C\\+\\+|Golang|Go|PHP|iOS|Android|Web|UI|UX|IT|SRE|DevOps)/.test(companyAfter[1])) {
+        company = companyAfter[1].trim();
+      } else {
+        // Fallback: bare company name without standard suffix
+        const bareCompany = afterText.match(/^\s*([\u4e00-\u9fa5A-Za-z0-9（）()·&]{2,15})/);
+        if (bareCompany && !/^(?:工作|职责|负责|参与|任职|主要|项目|时间|地址|电话|邮箱|学历|教育|技能|自我|证书|联系|个人|求职|应聘|期望|意向|语言|专业|学校|毕业|出生|高级|资深|初级|中级|工程师|经理|主管|专员|总监|设计师|分析师|架构师|专家|顾问|负责人|代表|助理|实习生|运营|编辑|策划|产品|研发|开发|测试|运维|市场|销售|财务|人力|前端|后端|全栈|算法|数据|技术|Java|Python|C\\+\\+|Golang|Go|PHP|iOS|Android|Web|UI|UX|IT|SRE|DevOps)/.test(bareCompany[1])) {
+          company = bareCompany[1].trim();
+        }
       }
-      
-      // If not found before, look after the date
       if (!company) {
-        const afterDate = text.substring(dm.index + dm.text.length, Math.min(text.length, dm.index + dm.text.length + 200));
-        
-        // Try: [company name] [position]  structure
-        // Company name is typically 2-20 chars right after the date
-        const lineMatch = afterDate.match(/^\s*([\u4e00-\u9fa5A-Za-z0-9（）()·&]{2,30}(?:公司|集团|科技|网络|信息|有限公司|股份公司|技术|软件|数据|传媒|咨询|教育|医疗|金融|地产|汽车|制造|互联网|电子商务|云|智能|数字|通信|电子|半导体))/);
-        if (lineMatch) {
-          company = lineMatch[1];
-        } else {
-          // Fallback: take first 2-15 Chinese chars as company name
-          const nameMatch = afterDate.match(/^\s*([\u4e00-\u9fa5]{2,15})/);
-          if (nameMatch && !nameMatch[1].match(/(?:工作|职责|负责|参与|任职|主要|项目|时间|地址|电话|邮箱|学历|教育|技能|自我|证书)/)) {
-            company = nameMatch[1];
+        // Try company BEFORE date (but only after previous date)
+        const beforeLines = beforeText.split(/[\r\n]+/);
+        for (let j = beforeLines.length - 1; j >= 0; j--) {
+          const line = beforeLines[j].trim();
+          if (!line || /^\d{4}/.test(line)) continue;
+          const namedMatch = line.match(/([\u4e00-\u9fa5A-Za-z0-9（）()·&]{2,40}(?:公司|集团|科技|网络|信息|有限公司|股份公司|技术|软件|数据|传媒|咨询|教育|医疗|金融|地产|汽车|制造|互联网|电子商务|银行|保险|证券|基金|投资|控股|事务所|研究院|学院|大学|医院|中心|平台|实验室|工作室))/);
+          if (namedMatch) { company = namedMatch[1]; break; }
+        }
+      }
+
+      // Find position
+      if (company) {
+        let posText = afterText;
+        if (posText.startsWith(company)) {
+          posText = posText.substring(company.length).trim();
+        }
+        const posMatch = posText.match(/^([\u4e00-\u9fa5A-Za-z0-9/（）()+·]{2,25}?)(?:[\s\n]|$)/);
+        if (posMatch && posMatch[1].trim().length >= 2) {
+          const candidate = posMatch[1].trim();
+          if (!/^(?:公司|集团|科技|网络|信息|有限|股份|技术|软件|数据)/.test(candidate) &&
+              !/^(?:工作|职责|负责|参与|任职|主要|项目|时间|地址|电话|邮箱|学历|教育|技能|自我|证书|联系|个人|求职)/.test(candidate)) {
+            position = candidate;
           }
         }
       }
-
-      // Look for position/job title
+      
       if (!position) {
-        const positionPatterns = [
-          /(?:职位|岗位|职务)[:：\s]*([\u4e00-\u9fa5A-Za-z0-9/（）()+·]{2,30})/,
-          /(高级|资深|初级|中级)?\s*([\u4e00-\u9fa5]{2,10}(?:工程师|经理|主管|专员|总监|设计师|分析师|架构师|专家|顾问|负责人|代表|助理|实习生))/,
-          /([\u4e00-\u9fa5A-Za-z]{2,20}(?:工程师|经理|主管|专员|总监|设计师|分析师))/,
-        ];
-        for (const pp of positionPatterns) {
-          const pm = snippet.match(pp);
-          if (pm) { position = pm[0].trim(); break; }
-        }
+        const pMatch = afterText.match(/(高级|资深|初级|中级)?\s*([\u4e00-\u9fa5]{2,10}(?:工程师|经理|主管|专员|总监|设计师|分析师|架构师|专家|顾问|负责人|代表|助理|实习生|运营|编辑|策划|产品|研发|开发|测试|运维|市场|销售|财务|人力))/);
+        if (pMatch) position = pMatch[0].trim();
       }
 
-      // Collect content after the date until next marker
-      let afterText = text.substring(dm.index + dm.text.length, Math.min(text.length, dm.index + dm.text.length + 400));
-      // Remove leading whitespace/punctuation
-      afterText = afterText.replace(/^[\s|\/·:：,-]+/, '').trim();
-      // Take first meaningful sentence(s)
-      const contentMatch = afterText.match(/^([\s\S]{0,200}?)(?=\d{4}[年.\/\-]|$)/);
-      if (contentMatch) {
-        content = contentMatch[1].trim().replace(/\n/g, ' ').replace(/\s+/g, ' ');
-      }
+      // Extract content
+      content = afterText
+        .replace(/^[\s\n\r]+/, '')
+        .replace(/\n/g, ' ')
+        .replace(/\s+/g, ' ')
+        .substring(0, 300)
+        .trim();
 
-      // Build the start/end date
-      const startDate = dm.startYear + (dm.startMonth ? '.' + dm.startMonth : '');
-      const endDate = dm.isPresent ? '至今' : (dm.endYear ? dm.endYear + (dm.endMonth ? '.' + dm.endMonth : '') : '');
-
-      if (company || position) {
+      const startDate = cur.startYear + (cur.startMonth ? '.' + cur.startMonth : '');
+      const endDate = cur.isPresent ? '至今' : (cur.endYear ? cur.endYear + (cur.endMonth ? '.' + cur.endMonth : '') : '');
+      
+      const key = (company || '') + '|' + startDate + '|' + endDate;
+      if (!seen.has(key) && (company || position)) {
+        seen.add(key);
         experiences.push({
           company: company || '',
           position: position || '',
@@ -342,97 +343,6 @@ const ResumeParser = {
       }
     }
 
-    // Step 5: Fallback - look for "工作经历" or "工作经验" section and parse it
-    if (experiences.length === 0) {
-      const expSection = text.match(/(?:工作经历|工作经验|工作履历)[\s\S]{0,1500}/);
-      if (expSection) {
-        const section = expSection[0];
-        // Try to find company + date patterns in the section
-        const sectionDates = [];
-        let sdm;
-        datePattern.lastIndex = 0;
-        while ((sdm = datePattern.exec(section)) !== null) {
-          sectionDates.push({
-            text: sdm[0], index: sdm.index,
-            startYear: sdm[1] || sdm[5], startMonth: sdm[2] || sdm[6] || '',
-            endYear: sdm[3], endMonth: sdm[4] || '', isPresent: !!sdm[7]
-          });
-        }
-        
-        for (let i = 0; i < sectionDates.length; i++) {
-          const sd = sectionDates[i];
-          const nextIdx = i + 1 < sectionDates.length ? sectionDates[i + 1].index : section.length;
-          const chunk = section.substring(Math.max(0, sd.index - 60), Math.min(section.length, sd.index + 250, nextIdx));
-          
-          // Get company from chunk
-          let comp = '';
-          companyPattern.lastIndex = 0;
-          let cm2;
-          while ((cm2 = companyPattern.exec(chunk)) !== null) comp = cm2[1];
-          
-          const startDate = sd.startYear + (sd.startMonth ? '.' + sd.startMonth : '');
-          const endDate = sd.isPresent ? '至今' : (sd.endYear ? sd.endYear + (sd.endMonth ? '.' + sd.endMonth : '') : '');
-          
-          if (comp) {
-            experiences.push({
-              company: comp,
-              position: '',
-              startDate: startDate,
-              endDate: endDate,
-              content: ''
-            });
-          }
-        }
-      }
-    }
-
-    // Step 6: Last resort - just find company names and guess
-    if (experiences.length === 0) {
-      companyPattern.lastIndex = 0;
-      let cm3;
-      const found = [];
-      while ((cm3 = companyPattern.exec(text)) !== null) {
-        if (!found.find(f => f === cm3[1])) {
-          found.push(cm3[1]);
-        }
-      }
-      // Also try bare company names (2-15 chars) before/after dates
-      datePattern.lastIndex = 0;
-      let dm4;
-      while ((dm4 = datePattern.exec(text)) !== null) {
-        // Company name before date
-        const before = text.substring(Math.max(0, dm4.index - 40), dm4.index).trim();
-        const beforeMatch = before.match(/([\u4e00-\u9fa5]{2,15})$/);
-        if (beforeMatch && !found.includes(beforeMatch[1])) {
-          found.push(beforeMatch[1]);
-        }
-        // Company name after date
-        const after = text.substring(dm4.index + dm4[0].length, Math.min(text.length, dm4.index + dm4[0].length + 40)).trim();
-        const afterMatch = after.match(/^([\u4e00-\u9fa5]{2,15})/);
-        if (afterMatch && !found.includes(afterMatch[1])) {
-          found.push(afterMatch[1]);
-        }
-      }
-
-      // Try to find dates near each company
-      for (const comp of found.slice(0, 8)) {
-        const idx2 = text.indexOf(comp);
-        if (idx2 === -1) continue;
-        const nearby = text.substring(Math.max(0, idx2 - 60), Math.min(text.length, idx2 + comp.length + 200));
-        datePattern.lastIndex = 0;
-        const dm2 = datePattern.exec(nearby);
-        const startDate = dm2 ? (dm2[1] || dm2[5]) + ((dm2[2] || dm2[6]) ? '.' + (dm2[2] || dm2[6]) : '') : '';
-        const endDate = dm2 ? (dm2[7] ? '至今' : (dm2[3] ? dm2[3] + (dm2[4] ? '.' + dm2[4] : '') : '')) : '';
-        experiences.push({
-          company: comp,
-          position: '',
-          startDate: startDate,
-          endDate: endDate,
-          content: ''
-        });
-      }
-    }
-
-    return experiences.slice(0, 10);
-  }
+    return experiences.slice(0, 15);
+  },
 };

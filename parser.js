@@ -4,13 +4,6 @@
 
 const ResumeParser = {
   /* 初始化 PDF.js worker */
-  initPdf() {
-    if (typeof pdfjsLib !== 'undefined') {
-      pdfjsLib.GlobalWorkerOptions.workerSrc =
-        'lib/pdf.worker.min.js';
-    }
-  },
-
   /* 判断文件类型 */
   getFileType(file) {
     const name = file.name.toLowerCase();

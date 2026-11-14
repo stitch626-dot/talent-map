@@ -4,6 +4,12 @@
 
 const ResumeParser = {
   /* 初始化 PDF.js worker */
+  initPdf() {
+    if (typeof pdfjsLib !== 'undefined') {
+      pdfjsLib.GlobalWorkerOptions.workerSrc =
+        'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+  },
   /* 判断文件类型 */
   getFileType(file) {
     const name = file.name.toLowerCase();
@@ -21,7 +27,7 @@ const ResumeParser = {
       throw new Error('PDF 解析库加载失败，请检查网络连接');
     }
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
     let text = '';
     for (let page = 1; page <= pdf.numPages; page++) {
       const content = await pdf.getPage(page);

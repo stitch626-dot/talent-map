@@ -28,7 +28,7 @@ const ResumeParser = {
       throw new Error('PDF 解析库加载失败，请检查网络连接');
     }
     const arrayBuffer = await file.arrayBuffer();
-    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+    const pdf = await pdfjsLib.getDocument({ data: arrayBuffer, disableWorker: true }).promise;
     let text = '';
     for (let page = 1; page <= pdf.numPages; page++) {
       const content = await pdf.getPage(page);

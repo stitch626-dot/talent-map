@@ -100,7 +100,7 @@ const GitHubStorage = {
         throw e;
       }
     }
-  }
+  },
 
   /* 测试 token 是否有效 */
   async test() {

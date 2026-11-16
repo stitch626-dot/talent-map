@@ -2486,12 +2486,30 @@ const Settings = {
 };
 
 /* ---------- 初始化 ---------- */
-function init() {
+async function init() {
   // Ensure there's at least one user and logged in
   if (!DB.currentUserId || !DB.users.find(u => u.id === DB.currentUserId)) {
     DB.currentUserId = DB.users[0].id;
   }
-  saveData();
+  // API 模式：先从 GitHub/服务器加载真实数据
+  if (IS_API_MODE && typeof ApiClient !== "undefined") {
+    try {
+      const data = await ApiClient.loadAll();
+      DB.users = data.users;
+      DB.space = data.space;
+      DB.companies = data.companies;
+      DB.positions = data.positions;
+      DB.talents = data.talents;
+      DB.communicationRecords = data.communicationRecords;
+      DB.reminders = data.reminders;
+      DB.activityLogs = data.activityLogs;
+      DB.tags = data.tags;
+      if (data.settings) DB.settings = data.settings;
+      saveData();
+    } catch(e) {
+      console.warn("Initial sync failed:", e.message);
+    }
+  }
   render();
 }
 

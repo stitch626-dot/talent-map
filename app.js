@@ -2574,10 +2574,12 @@ function seedDemoData() {
   console.log('Demo data seeded');
 }
 
-// Auto-seed on first load
-if (!loadData() || DB.companies.length === 0) {
+// Auto-seed on first load (skip in API mode - data loaded from server/GitHub)
+if (!IS_API_MODE && (!loadData() || DB.companies.length === 0)) {
   DB = defaultData();
   seedDemoData();
+} else if (IS_API_MODE && (!loadData() || DB.companies.length === 0)) {
+  DB = defaultData();
 }
 
 

@@ -5,6 +5,7 @@
 const GH_DATA_MODE = (typeof GitHubStorage !== "undefined" && window.location.hostname.includes("github.io"));
 
 if (GH_DATA_MODE) {
+  GitHubStorage.init();
 
   /* ---------- 覆盖 ApiClient 使用 GitHub 存储 ---------- */
   const _origRequest = ApiClient.request;
@@ -30,6 +31,35 @@ if (GH_DATA_MODE) {
   ApiClient.me = async function() {
     if (!ApiClient.getToken()) return null;
     return ApiClient.user;
+  };
+
+
+  ApiClient.loadAll = async function() {
+    const d = await GitHubStorage.load();
+    const companies = (d.companies || []).filter(c => !c.deleted_at).map(c => ({
+      id: c.id, name: c.name, industry: c.industry || "", scale: c.scale || "",
+      city: c.city || "", priority: c.priority || "", note: c.notes || "",
+      deletedAt: c.deleted_at || null, createdAt: c.created_at, updatedAt: c.updated_at
+    }));
+    const positions = (d.positions || []).filter(p => !p.deleted_at).map(p => ({
+      id: p.id, companyId: p.company_id, name: p.name, function: p.func || "",
+      level: p.level || "", city: p.city || "", status: p.status || "",
+      deletedAt: p.deleted_at || null, createdAt: p.created_at, updatedAt: p.updated_at
+    }));
+    const allTalents = (d.talents || []).map(t => _mapTalent(t, d));
+    const fullTalents = [...allTalents];
+    return {
+      space: { name: (d.space && d.space.name) || "我的团队空间" },
+      users: (d.users || []).map(u => ({ id: u.id, name: u.name, email: u.email, role: u.role, avatarColor: u.avatarColor || "#1f5eff" })),
+      companies: companies,
+      positions: positions,
+      talents: fullTalents,
+      communicationRecords: (d.communicationRecords || []).map(c => ({ ...c, talentId: c.talent_id })),
+      reminders: (d.reminders || []).map(r => ({ ...r, talentId: r.talent_id })),
+      activityLogs: (d.activityLogs || []).map(a => ({ ...a, talentId: a.talent_id })),
+      tags: (d.settings && d.settings.tags) || [],
+      settings: d.settings || {}
+    };
   };
 
   // 数据操作：通过 GitHub 存储

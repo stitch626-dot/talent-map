@@ -1,0 +1,24 @@
+{
+  "users": [
+    {
+      "id": "u_admin",
+      "name": "贾洪爽",
+      "email": "admin@talentmap.com",
+      "password": "240be518fabd2724ddb6f04eeb1da5967448d7e831c08c8fa822809f74c720a9",
+      "role": "admin",
+      "avatarColor": "#1f5eff"
+    }
+  ],
+  "space": {
+    "name": "贾洪爽 的团队空间"
+  },
+  "companies": [],
+  "positions": [],
+  "talents": [],
+  "talentPositions": [],
+  "communicationRecords": [],
+  "reminders": [],
+  "workExperiences": [],
+  "activityLogs": [],
+  "settings": {}
+}

@@ -5,7 +5,7 @@
 const GitHubStorage = {
   owner: "stitch626-dot",
   repo: "talent-map",
-  branch: "master",
+  branch: "gh-pages",
   dataPath: "data.json",
   token: null,
   sha: null,

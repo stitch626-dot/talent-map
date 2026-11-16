@@ -301,7 +301,7 @@ function navigateTo(pageId, params = {}) {
 }
 
 const App = {
-  navigate: navigateTo,
+  navigate: (page, params) => navigateTo(page, params),
   logout() {
     if (confirm('确定要退出登录吗？')) {
       DB.currentUserId = null;
@@ -2786,4 +2786,5 @@ if (IS_API_MODE) {
     } catch(e) { console.warn('Sync failed:', e.message); }
     render();
   };
+  App.navigate = navigateTo;
 }

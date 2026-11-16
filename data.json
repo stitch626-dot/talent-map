@@ -50,7 +50,19 @@
       "updated_at": "2026-11-16T15:01:58.679838"
     }
   ],
-  "positions": [],
+  "positions": [
+    {
+      "id": "pos_1794816986619_nj0y",
+      "name": "策划",
+      "company_id": "comp_excel_0",
+      "func": "产品",
+      "level": "不限",
+      "city": "",
+      "status": "盘点中",
+      "created_at": "2026-11-16T08:16:26.619Z",
+      "updated_at": "2026-11-16T08:16:26.619Z"
+    }
+  ],
   "talents": [
     {
       "id": "talent_excel_1",

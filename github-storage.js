@@ -64,31 +64,43 @@ const GitHubStorage = {
     return this.data;
   },
 
-  /* 保存 data.json 到 GitHub */
-  async save(data) {
+  /* 保存 data.json 到 GitHub（自动重试处理冲突） */
+  async save(data, retries = 3) {
     if (!this.token) throw new Error("请先设置 GitHub Token");
-    if (!this.sha) {
-      // If no SHA, try loading first to get it
-      try { await this.load(); } catch (e) { /* ignore */ }
+    for (let attempt = 0; attempt < retries; attempt++) {
+      try {
+        if (!this.sha) {
+          try { await this.load(); } catch (e) { /* ignore */ }
+        }
+        const path = "/repos/" + this.owner + "/" + this.repo + "/contents/" + this.dataPath;
+        const text = JSON.stringify(data, null, 2);
+        const bytes = new TextEncoder().encode(text);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) {
+          binary += String.fromCharCode(bytes[i]);
+        }
+        const content = btoa(binary);
+        const body = {
+          message: "\u66f4\u65b0\u4eba\u624d\u6570\u636e " + new Date().toLocaleString("zh-CN"),
+          content: content,
+          branch: this.branch
+        };
+        if (this.sha) body.sha = this.sha;
+        const result = await this.api("PUT", path, body);
+        this.sha = result.content.sha;
+        return result;
+      } catch(e) {
+        if (attempt < retries - 1 && (e.message.includes("409") || e.message.includes("conflict") || e.message.includes("does not match"))) {
+          // SHA conflict - reload and retry
+          console.warn("SHA conflict, retrying... (" + (attempt + 2) + "/" + retries + ")");
+          this.sha = null;
+          try { await this.load(); } catch (e2) {}
+          continue;
+        }
+        throw e;
+      }
     }
-    const path = "/repos/" + this.owner + "/" + this.repo + "/contents/" + this.dataPath;
-    const text = JSON.stringify(data, null, 2);
-    const bytes = new TextEncoder().encode(text);
-    let binary = "";
-    for (let i = 0; i < bytes.length; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    const content = btoa(binary);
-    const body = {
-      message: "更新人才数据 " + new Date().toLocaleString("zh-CN"),
-      content: content,
-      branch: this.branch
-    };
-    if (this.sha) body.sha = this.sha;
-    const result = await this.api("PUT", path, body);
-    this.sha = result.content.sha;
-    return result;
-  },
+  }
 
   /* 测试 token 是否有效 */
   async test() {

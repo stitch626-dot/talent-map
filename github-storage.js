@@ -53,7 +53,14 @@ const GitHubStorage = {
     const path = "/repos/" + this.owner + "/" + this.repo + "/contents/" + this.dataPath + "?ref=" + this.branch;
     const file = await this.api("GET", path);
     this.sha = file.sha;
-    this.data = JSON.parse(atob(file.content));
+    // 正确解码 UTF-8（GitHub API 返回 base64 编码的 UTF-8 内容）
+    const binary = atob(file.content);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    const text = new TextDecoder("utf-8").decode(bytes);
+    this.data = JSON.parse(text);
     return this.data;
   },
 
@@ -65,7 +72,13 @@ const GitHubStorage = {
       try { await this.load(); } catch (e) { /* ignore */ }
     }
     const path = "/repos/" + this.owner + "/" + this.repo + "/contents/" + this.dataPath;
-    const content = btoa(unescape(encodeURIComponent(JSON.stringify(data, null, 2))));
+    const text = JSON.stringify(data, null, 2);
+    const bytes = new TextEncoder().encode(text);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const content = btoa(binary);
     const body = {
       message: "更新人才数据 " + new Date().toLocaleString("zh-CN"),
       content: content,

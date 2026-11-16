@@ -394,5 +394,7 @@
   "reminders": [],
   "workExperiences": [],
   "activityLogs": [],
-  "settings": {}
+  "settings": {
+    "feishuWebhook": "https://open.feishu.cn/open-apis/bot/v2/hook/d68c1d3a-7fda-4b16-a734-06052cf27bc5"
+  }
 }

@@ -2508,6 +2508,7 @@ async function init() {
       saveData();
     } catch(e) {
       console.warn("Initial sync failed:", e.message);
+      showToast("加载失败: " + e.message, "error");
     }
   }
   render();
@@ -2783,7 +2784,7 @@ if (IS_API_MODE) {
       DB.activityLogs = data.activityLogs;
       DB.tags = data.tags;
       if (data.settings) DB.settings = data.settings;
-    } catch(e) { console.warn('Sync failed:', e.message); }
+    } catch(e) { console.warn('Sync failed:', e.message); showToast('加载失败: ' + e.message, 'error'); }
     render();
   };
   App.navigate = navigateTo;

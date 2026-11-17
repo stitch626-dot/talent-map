@@ -2637,7 +2637,13 @@ if (IS_API_MODE) {
         note: document.getElementById('mcNote').value
       });
       closeModal();
-      // Reload full data
+      const now = nowStr();
+      DB.companies.push({
+        id: uid('comp'), name, industry: document.getElementById('mcIndustry').value,
+        scale: document.getElementById('mcScale').value, city: document.getElementById('mcCity').value,
+        priority: document.getElementById('mcPriority').value, note: document.getElementById('mcNote').value,
+        deletedAt: null, createdAt: now, updatedAt: now
+      });
       App.navigate('companies');
     } catch(e) { showToast(e.message, 'error'); }
   };
@@ -2653,6 +2659,14 @@ if (IS_API_MODE) {
         priority: document.getElementById('ePriority').value,
         note: document.getElementById('eNote').value
       });
+      const now = nowStr();
+      const c = DB.companies.find(x => x.id === cid);
+      if (c) {
+        c.name = name; c.industry = document.getElementById('eIndustry').value;
+        c.scale = document.getElementById('eScale').value; c.city = document.getElementById('eCity').value;
+        c.priority = document.getElementById('ePriority').value; c.note = document.getElementById('eNote').value;
+        c.updatedAt = now;
+      }
       closeModal(); App.navigate('company-detail', { cid });
     } catch(e) { showToast(e.message, 'error'); }
   };
@@ -2661,6 +2675,8 @@ if (IS_API_MODE) {
     if (!confirm('确定删除？')) return;
     try {
       await ApiClient.deleteCompany(cid);
+      const idx = DB.companies.findIndex(x => x.id === cid);
+      if (idx !== -1) DB.companies.splice(idx, 1);
       App.navigate('companies');
       showToast('公司已删除');
     } catch(e) { showToast(e.message, 'error'); }
@@ -2677,6 +2693,13 @@ if (IS_API_MODE) {
         level: document.getElementById('pcLevel').value,
         city: document.getElementById('pcCity').value,
         status: document.getElementById('pcStatus').value
+      });
+      const now = nowStr();
+      DB.positions.push({
+        id: uid('pos'), companyId: cid, name, function: document.getElementById('pcFunc').value,
+        level: document.getElementById('pcLevel').value, city: document.getElementById('pcCity').value,
+        status: document.getElementById('pcStatus').value,
+        deletedAt: null, createdAt: now, updatedAt: now
       });
       closeModal(); App.navigate('company-detail', { cid });
     } catch(e) { showToast(e.message, 'error'); }
@@ -2696,6 +2719,17 @@ if (IS_API_MODE) {
         level: document.getElementById('ntLevel').value,
         positions: [{ positionId: document.getElementById('ntPosId').value, rating: '未评级' }]
       });
+      const now = nowStr();
+      DB.talents.push({
+        id: uid('talent'), name, currentCompany: document.getElementById('ntCompany').value,
+        currentPosition: document.getElementById('ntPosition').value,
+        phone: document.getElementById('ntPhone').value, email: document.getElementById('ntEmail').value,
+        city: document.getElementById('ntCity').value, level: document.getElementById('ntLevel').value,
+        positions: [{ positionId: document.getElementById('ntPosId').value, rating: '未评级' }],
+        status: 'active', workExperiences: [], communicationRecords: [], reminders: [],
+        contactStatus: '未接触', ownerId: currentUser ? currentUser.id : 'u_admin',
+        createdAt: now, updatedAt: now
+      });
       closeModal(); App.navigate('talents');
     } catch(e) { showToast(e.message, 'error'); }
   };
@@ -2714,28 +2748,39 @@ if (IS_API_MODE) {
         contactStatus: document.getElementById('etStatus').value,
         ownerId: document.getElementById('etOwner').value
       });
+      const now = nowStr();
+      const t = DB.talents.find(x => x.id === tid);
+      if (t) {
+        t.name = name; t.currentCompany = document.getElementById('etCompany').value;
+        t.currentPosition = document.getElementById('etPosition').value;
+        t.phone = document.getElementById('etPhone').value; t.email = document.getElementById('etEmail').value;
+        t.city = document.getElementById('etCity').value; t.level = document.getElementById('etLevel').value;
+        t.contactStatus = document.getElementById('etStatus').value;
+        t.ownerId = document.getElementById('etOwner').value;
+        t.updatedAt = now;
+      }
       closeModal(); App.navigate('talent-detail', { tid });
     } catch(e) { showToast(e.message, 'error'); }
   };
 
   TalentDetail.deleteTalent = async function(tid) {
     if (!confirm('确定删除？')) return;
-    try { await ApiClient.deleteTalent(tid); App.navigate('talents'); showToast('已删除'); }
+    try { await ApiClient.deleteTalent(tid); const t = DB.talents.find(x => x.id === tid); if (t) t.status = 'trash'; App.navigate('talents'); showToast('已删除'); }
     catch(e) { showToast(e.message, 'error'); }
   };
 
   TalentDetail.archive = async function(tid) {
-    try { await ApiClient.updateTalent(tid, { status: 'archived' }); App.navigate('talent-detail', { tid }); }
+    try { await ApiClient.updateTalent(tid, { status: 'archived' }); const t = DB.talents.find(x => x.id === tid); if (t) t.status = 'archived'; App.navigate('talent-detail', { tid }); }
     catch(e) { showToast(e.message, 'error'); }
   };
 
   TalentDetail.restore = async function(tid) {
-    try { await ApiClient.updateTalent(tid, { status: 'active' }); App.navigate('talent-detail', { tid }); }
+    try { await ApiClient.updateTalent(tid, { status: 'active' }); const t = DB.talents.find(x => x.id === tid); if (t) t.status = 'active'; App.navigate('talent-detail', { tid }); }
     catch(e) { showToast(e.message, 'error'); }
   };
 
   TalentDetail.setRating = async function(tid, posId, val) {
-    try { await ApiClient.updateTalent(tid, { positions: [{ positionId: posId, rating: val }] }); App.navigate('talent-detail', { tid }); }
+    try { await ApiClient.updateTalent(tid, { positions: [{ positionId: posId, rating: val }] }); const t = DB.talents.find(x => x.id === tid); if (t && t.positions) { const p = t.positions.find(x => x.positionId === posId); if (p) p.rating = val; else t.positions.push({ positionId: posId, rating: val }); } App.navigate('talent-detail', { tid }); }
     catch(e) { showToast(e.message, 'error'); }
   };
 
@@ -2747,12 +2792,24 @@ if (IS_API_MODE) {
         method: document.getElementById('acMethod').value,
         content: document.getElementById('acContent').value.trim()
       });
+      const now = nowStr();
+      const t2 = DB.talents.find(x => x.id === tid);
+      if (t2) {
+        if (!t2.communicationRecords) t2.communicationRecords = [];
+        t2.communicationRecords.push({
+          id: uid('comm'), talentId: tid,
+          date: document.getElementById('acDate').value,
+          method: document.getElementById('acMethod').value,
+          content: document.getElementById('acContent').value.trim(),
+          createdAt: now, updatedAt: now
+        });
+      }
       closeModal(); App.navigate('talent-detail', { tid });
     } catch(e) { showToast(e.message, 'error'); }
   };
 
   TalentDetail.deleteCommunication = async function(cid) {
-    try { await ApiClient.deleteCommunication(cid); render(); }
+    try { await ApiClient.deleteCommunication(cid); for (const t of DB.talents) { if (t.communicationRecords) { const idx = t.communicationRecords.findIndex(x => x.id === cid); if (idx !== -1) { t.communicationRecords.splice(idx, 1); break; } } } render(); }
     catch(e) { showToast(e.message, 'error'); }
   };
 
@@ -2762,6 +2819,17 @@ if (IS_API_MODE) {
         date: document.getElementById('srDate').value,
         note: document.getElementById('srNote').value.trim()
       });
+      const now = nowStr();
+      const t3 = DB.talents.find(x => x.id === tid);
+      if (t3) {
+        if (!t3.reminders) t3.reminders = [];
+        t3.reminders.push({
+          id: uid('rem'), talentId: tid,
+          date: document.getElementById('srDate').value,
+          note: document.getElementById('srNote').value.trim(),
+          createdAt: now, updatedAt: now
+        });
+      }
       closeModal(); App.navigate('talent-detail', { tid });
     } catch(e) { showToast(e.message, 'error'); }
   };
@@ -2772,19 +2840,6 @@ if (IS_API_MODE) {
     Route.page = page;
     Route.params = params || {};
     Route.breadcrumb = [];
-    try {
-      const data = await ApiClient.loadAll();
-      DB.users = data.users;
-      DB.space = data.space;
-      DB.companies = data.companies;
-      DB.positions = data.positions;
-      DB.talents = data.talents;
-      DB.communicationRecords = data.communicationRecords;
-      DB.reminders = data.reminders;
-      DB.activityLogs = data.activityLogs;
-      DB.tags = data.tags;
-      if (data.settings) DB.settings = data.settings;
-    } catch(e) { console.warn('Sync failed:', e.message); showToast('加载失败: ' + e.message, 'error'); }
     render();
   };
   App.navigate = navigateTo;
